@@ -4,24 +4,29 @@ import com.shadowvault.model.ImageData;
 import com.shadowvault.model.MessagePayload;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
+import java.nio.charset.StandardCharsets;
 
 public class LSBService {
     
     /**
-     * Embed a message into an image using LSB steganography
+     * Embed a message into an image using LSB steganography.
+     * Each embedded message includes a terminator byte (0x00) to mark the end.
+     * Therefore, capacity required = (message bytes + 1 terminator byte) * 8 bits.
      */
     public ImageData embed(ImageData imageData, MessagePayload payload) {
-        // Check if message fits in image
+        // Check if message fits in image (accounting for terminator byte)
         int maxBits = imageData.getWidth() * imageData.getHeight();
-        if (payload.getBitLength() > maxBits) {
+        byte[] messageBytes = payload.getMessageBytes();
+        int requiredBits = (messageBytes.length + 1) * 8; // +1 for terminator
+        
+        if (requiredBits > maxBits) {
             throw new IllegalArgumentException(
-                "Message too large! Need " + payload.getBitLength() + 
-                " bits but image can hold " + maxBits + " bits"
+                "Message too large! Need " + requiredBits + 
+                " bits (" + messageBytes.length + " message + 1 terminator byte) but image can hold " + maxBits + " bits"
             );
         }
         
-        // Get message bits
-        byte[] messageBytes = payload.getMessageBytes();
+        // Get pixel data
         int[] pixels = imageData.getPixelData().clone();
         int width = imageData.getWidth();
         int height = imageData.getHeight();
@@ -31,13 +36,13 @@ public class LSBService {
         System.arraycopy(messageBytes, 0, dataWithTerminator, 0, messageBytes.length);
         dataWithTerminator[messageBytes.length] = 0; // terminator
         
-        // Embed each bit
+        // Embed each bit (1 bit per pixel in the LSB of blue channel)
         int bitIndex = 0;
-        for (int i = 0; i < dataWithTerminator.length && bitIndex < pixels.length * 8; i++) {
+        for (int i = 0; i < dataWithTerminator.length && bitIndex < pixels.length; i++) {
             byte b = dataWithTerminator[i];
             for (int bitPos = 7; bitPos >= 0; bitPos--) {
                 int bit = (b >> bitPos) & 1;
-                int pixelIndex = bitIndex / 8; // 8 bits per pixel (using blue channel only)
+                int pixelIndex = bitIndex; // 1 bit per pixel
                 if (pixelIndex >= pixels.length) break;
                 
                 // Modify the LSB of the blue channel
@@ -102,16 +107,19 @@ public class LSBService {
         byte[] messageBytes = new byte[messageLength];
         System.arraycopy(extractedBytes, 0, messageBytes, 0, messageLength);
         
-        String message = new String(messageBytes);
+        String message = new String(messageBytes, StandardCharsets.UTF_8);
         return new MessagePayload(message);
     }
     
     /**
-     * Calculate how many bytes can fit in an image
+     * Calculate how many bytes can fit in an image.
+     * Accounts for the terminator byte that must be appended to every message.
+     * Available capacity = (pixels / 8) - 1 terminator byte
      */
     public int calculateCapacity(ImageData imageData) {
-        // 1 bit per pixel, 8 bits per byte
-        return (imageData.getWidth() * imageData.getHeight()) / 8;
+        // 1 bit per pixel, 8 bits per byte, minus 1 byte for terminator
+        int totalBytes = (imageData.getWidth() * imageData.getHeight()) / 8;
+        return Math.max(0, totalBytes - 1); // At least 0 (can't store negative)
     }
     
     /**
@@ -142,20 +150,25 @@ public class LSBService {
     }
 
     /**
-     * Check if a message can be embedded without actually embedding
+     * Check if a message can be embedded without actually embedding.
+     * Accounts for the terminator byte that will be added.
      */
     public boolean canEmbed(ImageData imageData, MessagePayload payload) {
         if (imageData == null || payload == null) return false;
         int maxBits = imageData.getWidth() * imageData.getHeight();
-        return payload.getBitLength() <= maxBits;
+        byte[] messageBytes = payload.getMessageBytes();
+        int requiredBits = (messageBytes.length + 1) * 8; // +1 for terminator
+        return requiredBits <= maxBits;
     }
 
     /**
-     * Get detailed information about the embedding process
+     * Get detailed information about the embedding process.
+     * Accounts for the terminator byte that will be added.
      */
     public EmbeddingInfo getEmbeddingInfo(ImageData imageData, MessagePayload payload) {
         int maxBits = imageData.getWidth() * imageData.getHeight();
-        int usedBits = payload.getBitLength();
+        byte[] messageBytes = payload.getMessageBytes();
+        int usedBits = (messageBytes.length + 1) * 8; // Include terminator byte
         int remainingBits = maxBits - usedBits;
         
         return new EmbeddingInfo(maxBits, usedBits, remainingBits);

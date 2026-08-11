@@ -1,5 +1,7 @@
 package com.shadowvault.model;
 
+import java.nio.charset.StandardCharsets;
+
 public class MessagePayload {
     
     private final String message;
@@ -14,7 +16,7 @@ public class MessagePayload {
     
     public MessagePayload(String message, String password, boolean isEncrypted) {
         this.message = message;
-        this.messageBytes = message.getBytes();
+        this.messageBytes = message.getBytes(StandardCharsets.UTF_8);
         this.bitLength = messageBytes.length * 8;
         this.password = password;
         this.isEncrypted = isEncrypted;
