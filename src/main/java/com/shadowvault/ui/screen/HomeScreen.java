@@ -7,6 +7,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
 import java.util.function.Consumer;
+import com.shadowvault.controller.ImageController;
 
 /**
  * Home screen for ShadowVault.
@@ -16,9 +17,13 @@ public class HomeScreen implements Screen {
     
     private final VBox root;
     private final Consumer<Screen> navigationCallback;
+    private final ImageController imageController;
     
-    public HomeScreen(Consumer<Screen> navigationCallback) {
+    public HomeScreen(
+        Consumer<Screen> navigationCallback,
+        ImageController imageController) {
         this.navigationCallback = navigationCallback;
+        this.imageController = imageController;
         this.root = createUI();
     }
     
@@ -66,8 +71,8 @@ public class HomeScreen implements Screen {
         HBox row1 = new HBox(20);
         row1.setStyle("-fx-alignment: center;");
         row1.getChildren().addAll(
-            createNavButton("Hide Data", 200, () -> navigationCallback.accept(new HideDataScreen(navigationCallback))),
-            createNavButton("Extract Data", 200, () -> navigationCallback.accept(new ExtractDataScreen(navigationCallback)))
+            createNavButton("Hide Data", 200, () -> navigationCallback.accept(new HideDataScreen(navigationCallback, imageController))),
+            createNavButton("Extract Data", 200, () -> navigationCallback.accept(new ExtractDataScreen(navigationCallback, imageController)))
         );
         
         HBox row2 = new HBox(20);
