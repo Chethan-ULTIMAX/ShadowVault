@@ -5,27 +5,27 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
+import javafx.stage.Stage;
 
 import java.util.function.Consumer;
 
 import com.shadowvault.controller.ImageController;
 
-/**
- * Home screen for ShadowVault.
- * Displays main navigation options to other screens.
- */
 public class HomeScreen implements Screen {
 
     private final VBox root;
     private final Consumer<Screen> navigationCallback;
     private final ImageController imageController;
+    private final Stage primaryStage;
 
     public HomeScreen(
             Consumer<Screen> navigationCallback,
-            ImageController imageController) {
+            ImageController imageController,
+            Stage primaryStage) {
 
         this.navigationCallback = navigationCallback;
         this.imageController = imageController;
+        this.primaryStage = primaryStage;
         this.root = createUI();
     }
 
@@ -83,7 +83,8 @@ public class HomeScreen implements Screen {
                 () -> navigationCallback.accept(
                     new HideDataScreen(
                         navigationCallback,
-                        imageController
+                        imageController,
+                        primaryStage
                     )
                 )
             ),
@@ -94,7 +95,8 @@ public class HomeScreen implements Screen {
                 () -> navigationCallback.accept(
                     new ExtractDataScreen(
                         navigationCallback,
-                        imageController
+                        imageController,
+                        primaryStage
                     )
                 )
             )

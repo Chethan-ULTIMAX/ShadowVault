@@ -2,35 +2,40 @@ package com.shadowvault.ui;
 
 import com.shadowvault.controller.ImageController;
 import com.shadowvault.ui.screen.HomeScreen;
+import com.shadowvault.ui.screen.Screen;
 import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
-/**
- * MainWindow is the entry point for the ShadowVault application UI.
- * It sets up the navigation manager and displays the home screen.
- */
 public class MainWindow {
-
+    
+    private static Stage stage;
+    private static ImageController imageController;
+    private static Screen currentScreen;
+    private static BorderPane root;
+    
     public static void show(Stage primaryStage) {
-        // Create navigation manager
-        NavigationManager navigationManager = new NavigationManager();
-
-        // Create ONE shared ImageController
-        ImageController imageController = new ImageController();
-
-        // Display the home screen
-        navigationManager.navigateTo(
-            new HomeScreen(
-                navigationManager::navigateTo,
-                imageController
-            )
-        );
-
-        // Create scene with the navigation manager's root
-        Scene scene = new Scene(navigationManager.getRoot(), 1000, 800);
-
-        primaryStage.setTitle("ShadowVault");
-        primaryStage.setScene(scene);
-        primaryStage.show();
+        stage = primaryStage;
+        imageController = new ImageController();
+        root = new BorderPane();
+        root.setStyle("-fx-background-color: #0f3460;");
+        
+        // Show Home screen
+        navigateTo(new HomeScreen(MainWindow::navigateTo, imageController, stage));
+        
+        Scene scene = new Scene(root, 950, 750);
+        stage.setTitle("ShadowVault");
+        stage.setScene(scene);
+        stage.show();
+    }
+    
+    public static void navigateTo(Screen screen) {
+        if (currentScreen != null) {
+            currentScreen.onHide();
+        }
+        currentScreen = screen;
+        currentScreen.onShow();
+        root.setCenter(screen.getRoot());
+        stage.setTitle("ShadowVault - " + screen.getTitle());
     }
 }
