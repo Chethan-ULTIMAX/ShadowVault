@@ -30,6 +30,7 @@ public class ExtractDataScreen implements Screen {
     private Label statusLabel;
     private TextArea resultArea;
     private Button extractBtn;
+    private Button saveBtn;
 
     public ExtractDataScreen(Consumer<Screen> navigationCallback, ImageController imageController, Stage primaryStage) {
         this.navigationCallback = navigationCallback;
@@ -85,14 +86,14 @@ public class ExtractDataScreen implements Screen {
 
         HBox imageSelectionRow = createImageSelectionRow();
         HBox imageDisplayRow = createImageDisplayRow();
-        Button extractBtn = createExtractButton();
+        Button extractButton = createExtractButton();
         VBox resultSection = createResultSection();
 
         content.getChildren().addAll(
                 title,
                 imageSelectionRow,
                 imageDisplayRow,
-                extractBtn,
+                extractButton,
                 resultSection
         );
 
@@ -177,7 +178,26 @@ public class ExtractDataScreen implements Screen {
         resultArea.setWrapText(true);
         resultArea.setEditable(false);
 
-        section.getChildren().addAll(resultLabel, resultArea);
+        // Save button row
+        HBox buttonRow = new HBox(15);
+        buttonRow.setStyle("-fx-alignment: center;");
+
+        saveBtn = new Button("💾 Save Message");
+        saveBtn.setStyle(
+                "-fx-background-color: #2ecc71; " +
+                "-fx-text-fill: #1a1a2e; " +
+                "-fx-font-size: 14px; " +
+                "-fx-font-weight: bold; " +
+                "-fx-padding: 10 25; " +
+                "-fx-background-radius: 5; " +
+                "-fx-cursor: hand;"
+        );
+        saveBtn.setDisable(true);
+        saveBtn.setOnAction(e -> saveExtractedMessage());
+
+        buttonRow.getChildren().add(saveBtn);
+
+        section.getChildren().addAll(resultLabel, resultArea, buttonRow);
         return section;
     }
 
@@ -201,6 +221,7 @@ public class ExtractDataScreen implements Screen {
             fileNameLabel.setStyle("-fx-text-fill: #e94560; -fx-font-size: 13px;");
 
             extractBtn.setDisable(false);
+            saveBtn.setDisable(true);
             resultArea.clear();
 
             statusLabel.setText("✅ Image loaded: " + imageData.getFileName());
@@ -216,6 +237,7 @@ public class ExtractDataScreen implements Screen {
 
             if (extracted != null && !extracted.isEmpty()) {
                 resultArea.setText(extracted);
+                saveBtn.setDisable(false);
                 statusLabel.setText("✅ Message extracted successfully!");
                 showAlert("Success", "Message extracted successfully!\n\n" + extracted);
             } else {
@@ -232,6 +254,33 @@ public class ExtractDataScreen implements Screen {
         }
     }
 
+    private void saveExtractedMessage() {
+        String message = resultArea.getText();
+        if (message == null || message.isEmpty()) {
+            showAlert("No Message", "No extracted message to save!");
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Save Extracted Message");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Text Files", "*.txt")
+        );
+        fileChooser.setInitialFileName("extracted_message.txt");
+
+        File file = fileChooser.showSaveDialog(primaryStage);
+        if (file != null) {
+            try {
+                java.nio.file.Files.write(file.toPath(), message.getBytes());
+                statusLabel.setText("✅ Message saved to: " + file.getName());
+                showAlert("Success", "Message saved successfully!\n\nLocation: " + file.getAbsolutePath());
+            } catch (Exception ex) {
+                showAlert("Error", "Failed to save: " + ex.getMessage());
+                statusLabel.setText("❌ Failed to save");
+            }
+        }
+    }
+
     private void showAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
@@ -241,20 +290,14 @@ public class ExtractDataScreen implements Screen {
     }
 
     @Override
-    public Node getRoot() {
-        return root;
-    }
+    public Node getRoot() { return root; }
 
     @Override
-    public void onShow() {
-    }
+    public void onShow() {}
 
     @Override
-    public void onHide() {
-    }
+    public void onHide() {}
 
     @Override
-    public String getTitle() {
-        return "Extract Data";
-    }
+    public String getTitle() { return "Extract Data"; }
 }

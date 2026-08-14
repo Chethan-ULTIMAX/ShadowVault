@@ -2,6 +2,7 @@ package com.shadowvault.ui.screen;
 
 import com.shadowvault.controller.ImageController;
 import com.shadowvault.model.ImageData;
+import com.shadowvault.util.FileUtils;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
@@ -24,10 +25,10 @@ public class AnalysisScreen implements Screen {
     private final ImageController imageController;
     private final Stage primaryStage;
 
-    // UI Components
     private ImageView originalImageView;
     private ImageView stegoImageView;
     private Label fileNameLabel;
+    private Label imageInfoLabel;
     private Label statusLabel;
     private Label mseLabel;
     private Label psnrLabel;
@@ -35,6 +36,9 @@ public class AnalysisScreen implements Screen {
     private Label qualityLabel;
     private Button analyzeBtn;
     private Button loadStegoBtn;
+    
+    private File originalFile;
+    private File stegoFile;
 
     public AnalysisScreen(Consumer<Screen> navigationCallback, ImageController imageController, Stage primaryStage) {
         this.navigationCallback = navigationCallback;
@@ -88,22 +92,21 @@ public class AnalysisScreen implements Screen {
         Label title = new Label("Image Analysis");
         title.setStyle("-fx-text-fill: #f39c12; -fx-font-size: 32px; -fx-font-weight: bold;");
 
-        // Image selection row
         HBox selectionRow = createSelectionRow();
-
-        // Image display (Original + Stego side by side)
         HBox imageDisplayRow = createImageDisplayRow();
-
-        // Metrics display
+        
+        // Image info label
+        imageInfoLabel = new Label("No images loaded");
+        imageInfoLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 13px;");
+        
         VBox metricsSection = createMetricsSection();
-
-        // Analyze button
         HBox actionRow = createActionRow();
 
         content.getChildren().addAll(
                 title,
                 selectionRow,
                 imageDisplayRow,
+                imageInfoLabel,
                 metricsSection,
                 actionRow
         );
@@ -138,6 +141,7 @@ public class AnalysisScreen implements Screen {
                 "-fx-cursor: hand;"
         );
         loadStegoBtn.setDisable(true);
+        loadStegoBtn.setOnAction(e -> loadStegoImage());
 
         fileNameLabel = new Label("No images loaded");
         fileNameLabel.setStyle("-fx-text-fill: #888; -fx-font-size: 13px;");
@@ -150,7 +154,6 @@ public class AnalysisScreen implements Screen {
         HBox row = new HBox(30);
         row.setStyle("-fx-alignment: center;");
 
-        // Original Image
         VBox originalBox = new VBox(5);
         originalBox.setStyle("-fx-alignment: center;");
         Label originalLabel = new Label("Original");
@@ -164,7 +167,6 @@ public class AnalysisScreen implements Screen {
 
         originalBox.getChildren().addAll(originalLabel, originalImageView);
 
-        // Stego Image
         VBox stegoBox = new VBox(5);
         stegoBox.setStyle("-fx-alignment: center;");
         Label stegoLabel = new Label("Stego Image");
@@ -242,24 +244,30 @@ public class AnalysisScreen implements Screen {
         return footer;
     }
 
-    // ===== ACTION METHODS =====
-
     private void loadOriginalImage() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Select Original Image");
         fileChooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("PNG Files", "*.png"),
-                new FileChooser.ExtensionFilter("JPEG Files", "*.jpg", "*.jpeg")
+                new FileChooser.ExtensionFilter("JPEG Files", "*.jpg", "*.jpeg"),
+                new FileChooser.ExtensionFilter("All Images", "*.png", "*.jpg", "*.jpeg")
         );
 
         File file = fileChooser.showOpenDialog(primaryStage);
         if (file != null) {
-            ImageData imageData = imageController.loadImage(primaryStage);
-            if (imageData != null) {
-                originalImageView.setImage(imageData.getImage());
+            try {
+                javafx.scene.image.Image image = new javafx.scene.image.Image(file.toURI().toString());
+                originalImageView.setImage(image);
+                originalFile = file;
+                
+                imageController.loadImage(primaryStage);
                 loadStegoBtn.setDisable(false);
                 statusLabel.setText("✅ Original image loaded: " + file.getName());
                 updateFileNameLabel();
+                displayImageInfo();
+                
+            } catch (Exception e) {
+                showAlert("Error", "Failed to load image: " + e.getMessage());
             }
         }
     }
@@ -268,18 +276,23 @@ public class AnalysisScreen implements Screen {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Select Stego Image");
         fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("PNG Files", "*.png")
+                new FileChooser.ExtensionFilter("PNG Files", "*.png"),
+                new FileChooser.ExtensionFilter("All Images", "*.png", "*.jpg", "*.jpeg")
         );
 
         File file = fileChooser.showOpenDialog(primaryStage);
         if (file != null) {
-            ImageData imageData = imageController.loadImage(primaryStage);
-            if (imageData != null) {
-                stegoImageView.setImage(imageData.getImage());
-                // Store as stego image
+            try {
+                javafx.scene.image.Image image = new javafx.scene.image.Image(file.toURI().toString());
+                stegoImageView.setImage(image);
+                stegoFile = file;
                 analyzeBtn.setDisable(false);
                 statusLabel.setText("✅ Stego image loaded: " + file.getName());
                 updateFileNameLabel();
+                
+            } catch (Exception e) {
+                showAlert("Error", "Failed to load stego image: " + e.getMessage());
+                statusLabel.setText("❌ Failed to load stego image");
             }
         }
     }
@@ -289,6 +302,18 @@ public class AnalysisScreen implements Screen {
         String stego = stegoImageView.getImage() != null ? "✓ Stego" : "✗ Stego";
         fileNameLabel.setText(original + " | " + stego);
         fileNameLabel.setStyle("-fx-text-fill: #00d4ff; -fx-font-size: 13px;");
+    }
+
+    private void displayImageInfo() {
+        if (originalFile != null && originalImageView.getImage() != null) {
+            String info = String.format("📐 %s | 💾 %s | 📏 %d x %d pixels", 
+                originalFile.getName(),
+                FileUtils.getFileSizeStr(originalFile.length()),
+                (int) originalImageView.getImage().getWidth(),
+                (int) originalImageView.getImage().getHeight());
+            imageInfoLabel.setText(info);
+            imageInfoLabel.setStyle("-fx-text-fill: #00d4ff; -fx-font-size: 13px;");
+        }
     }
 
     private void analyzeImages() {
@@ -301,12 +326,10 @@ public class AnalysisScreen implements Screen {
             statusLabel.setText("⏳ Analyzing images...");
             analyzeBtn.setDisable(true);
 
-            // Calculate metrics
             double mse = imageController.calculateMSE();
             double psnr = imageController.calculatePSNR();
             double ssim = imageController.calculateSSIM();
 
-            // Update labels
             mseLabel.setText(String.format("MSE: %.4f", mse));
             mseLabel.setStyle("-fx-text-fill: #00d4ff; -fx-font-size: 14px;");
 
@@ -316,7 +339,6 @@ public class AnalysisScreen implements Screen {
             ssimLabel.setText(String.format("SSIM: %.4f", ssim));
             ssimLabel.setStyle("-fx-text-fill: #00d4ff; -fx-font-size: 14px;");
 
-            // Quality assessment
             String quality;
             String color;
             if (psnr > 40) {
