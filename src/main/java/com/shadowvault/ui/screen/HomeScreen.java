@@ -113,7 +113,8 @@ public class HomeScreen implements Screen {
                 () -> navigationCallback.accept(
                     new AnalysisScreen(
                         navigationCallback,
-                        imageController
+                        imageController,
+                        primaryStage
                     )
                 )
             ),

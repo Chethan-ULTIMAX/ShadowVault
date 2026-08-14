@@ -4,6 +4,7 @@ import com.shadowvault.model.ImageData;
 import com.shadowvault.model.MessagePayload;
 import com.shadowvault.service.LSBService;
 import com.shadowvault.service.PixelService;
+import com.shadowvault.service.QualityMetrics;  // ← ADD THIS IMPORT
 import com.shadowvault.util.FileUtils;
 import com.shadowvault.util.ValidationUtils;
 import javafx.scene.image.Image;
@@ -19,11 +20,13 @@ public class ImageController {
     private ImageData stegoImageData;
     private final PixelService pixelService;
     private final LSBService lsbService;
+    private final QualityMetrics qualityMetrics;  // ← ADD THIS FIELD
     private MessagePayload extractedPayload;
     
     public ImageController() {
         this.pixelService = new PixelService();
         this.lsbService = new LSBService();
+        this.qualityMetrics = new QualityMetrics();  // ← ADD THIS
     }
     
     // ===== IMAGE LOADING =====
@@ -123,6 +126,29 @@ public class ImageController {
     
     public ValidationUtils.ValidationResult validateExtract() {
         return ValidationUtils.validateExtraction(currentImageData);
+    }
+    
+    // ===== QUALITY METRICS =====
+    
+    public double calculateMSE() {
+        if (currentImageData == null || processedImageData == null) return -1;
+        return qualityMetrics.calculateMSE(currentImageData, processedImageData);
+    }
+    
+    public double calculatePSNR() {
+        if (currentImageData == null || processedImageData == null) return -1;
+        double mse = calculateMSE();
+        if (mse < 0) return -1;
+        return qualityMetrics.calculatePSNR(mse);
+    }
+    
+    public double calculateSSIM() {
+        if (currentImageData == null || processedImageData == null) return -1;
+        return qualityMetrics.calculateSSIM(currentImageData, processedImageData);
+    }
+    
+    public ImageData getOriginalImage() {
+        return currentImageData;
     }
     
     // ===== OTHER =====
