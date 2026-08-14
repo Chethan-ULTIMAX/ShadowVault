@@ -1,5 +1,6 @@
 package com.shadowvault.ui.screen;
 
+import com.shadowvault.controller.ImageController;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -14,9 +15,11 @@ public class AboutScreen implements Screen {
     
     private final BorderPane root;
     private final Consumer<Screen> navigationCallback;
+    private final ImageController imageController;
     
-    public AboutScreen(Consumer<Screen> navigationCallback) {
+    public AboutScreen(Consumer<Screen> navigationCallback, ImageController imageController) {
         this.navigationCallback = navigationCallback;
+        this.imageController = imageController;
         this.root = createUI();
     }
     
@@ -73,7 +76,7 @@ public class AboutScreen implements Screen {
             "-fx-background-radius: 5; " +
             "-fx-cursor: hand;"
         );
-        backBtn.setOnAction(e -> navigationCallback.accept(new HomeScreen(navigationCallback)));
+        backBtn.setOnAction(e -> navigationCallback.accept(new HomeScreen(navigationCallback, imageController)));
         
         header.getChildren().add(backBtn);
         return header;
