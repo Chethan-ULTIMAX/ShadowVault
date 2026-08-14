@@ -1,0 +1,50 @@
+name: Build ShadowVault Windows Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build and test
+        run: mvn clean package
+
+      - name: Create application image
+        run: |
+          jpackage `
+            --input target `
+            --name ShadowVault `
+            --main-jar shadowvault-0.1.0-SNAPSHOT.jar `
+            --main-class com.shadowvault.App `
+            --type app-image `
+            --dest release
+
+      - name: Create ZIP
+        shell: powershell
+        run: |
+          Compress-Archive `
+            -Path release\ShadowVault `
+            -DestinationPath ShadowVault-${{ github.ref_name }}-Windows.zip
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ShadowVault-${{ github.ref_name }}-Windows.zip
+          generate_release_notes: false
